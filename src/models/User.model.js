@@ -52,7 +52,7 @@ const userSchema = new Schema(
     );
 userSchema.pre("save", async function(next) {   //middleware
 if(!this.isModified("password")) return next();
-this.password = bcrypt.hash(this.password, 10)  // password incryption
+this.password = await bcrypt.hash(this.password, 10)  // password incryption
 next();
 })   //pre is a mongoose hook that run before any opertaion like:-save, upadte, delete , insert.
 

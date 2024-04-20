@@ -36,3 +36,5 @@ In this example, the middleware function logs a message whenever a request is ma
 if we write app.get('/users', function(req, res) {}), means we are not exporting the routes. but when we export the routes and import them for handling routes, then, in this case, we need to use the middleware.
 So, we write app.use('/users', userRouter);
 So, when someone will write /users, then, it will give control to the userRouter.
+
+we can extract json data from req.body.
