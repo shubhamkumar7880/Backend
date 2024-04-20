@@ -1,4 +1,4 @@
-class ApiError extends Error {   // inheriting error clas from node.
+class ApiError extends Error {   // inheriting error class from node.
     constructor(
         statusCode, 
         message= "Something went wrong",
@@ -16,7 +16,7 @@ class ApiError extends Error {   // inheriting error clas from node.
         if(stack){
         this.stack = stack;
         } else {
-         Error.captureStackTrace(this, this.constructor)  //passing the reference in stcak trace(reffred by node.js documentation)
+         Error.captureStackTrace(this, this.constructor)  //passing the reference in stack trace(reffered by node.js documentation)
         }
     }
 
