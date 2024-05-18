@@ -38,3 +38,21 @@ So, we write app.use('/users', userRouter);
 So, when someone will write /users, then, it will give control to the userRouter.
 
 we can extract json data from req.body.
+
+Access tokens and refresh tokens are both integral parts of the OAuth 2.0 protocol, but they serve different purposes in the context of authentication and authorization:
+
+1. **Access Token**:
+   - An access token is a credential used to access protected resources on behalf of the user.
+   - It is a short-lived token that grants access to specific resources or APIs.
+   - Access tokens are typically included in HTTP headers of API requests as a means of authentication.
+   - They contain information about the permissions granted to the client application and the user.
+   - Access tokens are usually scoped, meaning they are only valid for a specific set of resources or actions.
+
+2. **Refresh Token**:
+   - A refresh token is a credential used to obtain a new access token after the current access token expires.
+   - It is long-lived compared to the access token, typically lasting for days or even months.
+   - Refresh tokens are securely stored by the client application and are used to obtain new access tokens without requiring the user to re-authenticate.
+   - They are not meant to be included in API requests; instead, they are exchanged for a new access token through a token refresh request.
+   - Refresh tokens are valuable targets for attackers because they can be used to obtain fresh access tokens without the user's involvement.
+
+In summary, access tokens are short-lived credentials used to access resources, while refresh tokens are long-lived credentials used to obtain new access tokens without re-authentication.

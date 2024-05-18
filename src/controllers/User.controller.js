@@ -4,6 +4,21 @@ import asyncHandler from "../utils/asyncHandler.js";
 import uploadOnCloudinary from "../utils/cloudinary.js";
 import ApiResponse from "../utils/ApiResponse.js";
 
+const generateAccessAndRefreshToken = async(userId) => {
+    try{
+        const user = await User.findById(userId);
+        const access_token = user.generateAccessToken();
+        const refresh_token = user.generateRefreshToken();
+        user.refreshToken = refresh_token;
+        await user.save({ validateBeforeSave: true }) // we are passing this (validateBeforeSave: true) to avoid validations example:- validation for username, password or email to save in database.
+        return {
+            access_token,
+            refresh_token
+        }
+    } catch(error){
+        throw new ApiError(500, "something went wrong while generating access and refresh token");
+    }
+}
 
 const registerUser = asyncHandler(async (req, res) => {
     const {fullName, email, username, password} = req.body;
@@ -58,4 +73,71 @@ const registerUser = asyncHandler(async (req, res) => {
     )
 })
 
-export default registerUser;
+const loginUser = asyncHandler(async(req, res) => {
+    const {username, email, password} = req.body;
+
+    if(!(username || email)){
+        throw new ApiError(400, "Username or Password is required");
+    }
+
+    const user = await User.findOne({
+        $or: [{username: username.toLowerCase()}, {email: email.toLowerCase()}]
+    })
+
+    if(!user){
+        throw new ApiError(404, "User not found");
+    }
+
+    const isPasswordValid = await user.isPasswordCorrect(password);
+
+    if(!isPasswordValid){
+        throw new ApiError(401, "Invalid username or password");
+    }
+    const {access_token, refresh_token} = await generateAccessAndRefreshToken(user._id);
+
+    // const loggedInUser = await user.findById(user._id).select("-password -refreshToken");
+
+    const loggedInUser = {...user};
+    delete loggedInUser.password;
+    delete loggedInUser.refreshToken;
+
+    const options = {
+        httpOnly: true,  // cookises can be modifiable from server only not from frontend side.
+        secure: true
+    }
+
+    return res.status(200)
+    .cookie("accessToken", access_token, options)
+    .cookie("refreshToken", refresh_token, options)
+    .json(
+        new ApiResponse(200, {
+            user: loggedInUser,
+            accessToken: access_token,
+            refreshToken: refresh_token
+        }, "User logged in successfully")
+    )
+});
+
+const logoutUser = asyncHandler(async(req, res) => {
+    await User.findByIdAndUpdate(req.user._id,
+    {
+        $set: {      // $set is a mongodb operator that sets a value to the field.
+            refreshToken: undefined,
+        }
+    },
+    {
+        new: true,   // new makes sure that the return response we get is a new value. 
+    } 
+)
+const options = {
+    httpOnly: true,  // cookises can be modifiable from server only not from frontend side.
+    secure: true
+}
+
+return res.status(200)
+.clearCookie("accessToken")
+.clearCookie("refreshToken")
+.json(new ApiResponse(200, {}, "User logged out successfully"));
+});
+
+export { registerUser, loginUser, logoutUser };
