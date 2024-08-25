@@ -4,6 +4,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import uploadOnCloudinary from "../utils/cloudinary.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshToken = async (userId) => {
     try {
@@ -266,21 +267,21 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         }
     }, {
         $addFields: {
-         subscribersCount:{
-            $size: "$subscribers"
-         },
-         subscriberedToCount:{
-            $size: "$subscriberedTo"
-         },
-         isSubscribed: {
-            $cond: {
-                if: {$in: [req.user?._id, "$subscribers.subscriber"]},  // check if user is present in the subscriber object as subscriber(field).
-                then: true,
-                else: false
+            subscribersCount: {
+                $size: "$subscribers"
+            },
+            subscriberedToCount: {
+                $size: "$subscriberedTo"
+            },
+            isSubscribed: {
+                $cond: {
+                    if: { $in: [req.user?._id, "$subscribers.subscriber"] },  // check if user is present in the subscriber object as subscriber(field).
+                    then: true,
+                    else: false
+                }
             }
-          }   
         }
-    }, 
+    },
     {
         $project: {
             _id: 1,
@@ -295,12 +296,58 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         }
     }]);
 
-    if(!channel?.length){
+    if (!channel?.length) {
         throw new ApiError(404, "Channel not found");
     }
 
     return res.status(200)
-    .json(new ApiResponse(200, channel[0], "User Channel fetched successfully!"))
+        .json(new ApiResponse(200, channel[0], "User Channel fetched successfully!"));
+});
+
+const getWatchHistory = asyncHandler(async (req, res) => {
+    const user = User.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(req.user?._id) // mongoose doesn't support here in pipeline, so, we need to make mongoose id using new mongoose.Types.ObjectId.
+            }
+        },
+        {
+            $lookup: {
+                from: "videos",   // join with Video collection.
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        fullName: 1,
+                                        username: 1,
+                                        avatar: 1
+                                    }
+                                },
+                                {
+                                    $addFields: {
+                                        owner: {   // if we write same name, then, it overrides the data.
+                                            $first: "$owner"   // first operator returns 0th index of an array.
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    ]);
+
+    return res.status(200).json(new ApiResponse(200, user[0]?.watchHistory, "watchHistory fetched successfully!"));
 });
 
 export {
@@ -313,5 +360,6 @@ export {
     updateAccountDetails,
     updateUserAvatar,
     updateCoverImage,
-    getUserChannelProfile
+    getUserChannelProfile,
+    getWatchHistory
 };
