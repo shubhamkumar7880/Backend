@@ -56,3 +56,37 @@ Access tokens and refresh tokens are both integral parts of the OAuth 2.0 protoc
    - Refresh tokens are valuable targets for attackers because they can be used to obtain fresh access tokens without the user's involvement.
 
 In summary, access tokens are short-lived credentials used to access resources, while refresh tokens are long-lived credentials used to obtain new access tokens without re-authentication.
+
+Aggregation pipeline
+
+- The $lookup stage in MongoDB's aggregation pipeline allows you to perform a left outer join between documents in the current     collection and documents in another (or the same) collection. This stage enables you to combine related documents from different collections based on a common field.
+- from: The name of the collection you want to join with (referred to as the "foreign" collection). This value will be in lowercase and always in plural form.
+- localField: The field from the input (current) collection that will be compared to the foreignField.
+- foreignField: The field from the from collection that will be compared to the localField.
+- as: The name of the new array field that will hold the matched documents from the from collection.
+- the returned data structure is array. to return different data structure, we use $addFileds.
+ example:-
+
+ [
+  {
+    $lookup: {
+      from: "authors",
+      localFiled: "author_id",
+      foreignFiled: "_id",
+      as: "author_details" 
+    }
+  },
+  {
+    $addFields: {
+      author_details: {
+        $arrayElement: ["$author_details", 0]  //this will return first element of author_details array.
+      }
+    }
+  }
+ ]
+
+- In MongoDB, the $match stage is a part of the aggregation pipeline that filters the documents to pass only those that match specified conditions to the next stage in the pipeline. It functions similarly to the find() operation but within the context of the aggregation pipeline, allowing you to filter data before performing more complex transformations.
+
+- The $addFields stage in MongoDB's aggregation pipeline is used to add new fields to documents or to modify existing fields by computing new values. Unlike $project, which can also reshape documents by including or excluding fields, $addFields focuses on adding fields without altering the other fields in the document.
+
+- The $project stage in MongoDB's aggregation pipeline is used to include, exclude, or transform fields in the documents that pass through the pipeline. It allows you to shape the output by specifying which fields should be included in the result, as well as performing computations and renaming fields.
