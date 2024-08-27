@@ -45,11 +45,6 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
 const publishAVideo = asyncHandler(async (req, res) => {
     const { title, description } = req.body;
-    const { videoFile, thumbnailFile } = req.files;
-
-    if (!(videoFile && thumbnailFile)) {
-        throw new ApiError(400, "Video or thumbnail file is required");
-    }
 
     if (!(title && description)) {
         throw new ApiError(400, "Title and description are required");
