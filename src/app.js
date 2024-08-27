@@ -17,8 +17,14 @@ app.use(cookieParser()) // cookieparser is used to set or access cookies(crud op
 
 // routes import
 import userRouter from "./routes/User.routes.js";
+import videoRouter from "./routes/Video.routes.js";
 
 //routes declarations
 app.use("/api/v1/users", userRouter); // here /users works as prefix means our url will be http://localhost:8000/api/v1/users/'route name'
+app.use("/api/v1/videos", videoRouter)
+
+app.use((err, req, res, next) => {
+    res.status(err.statusCode ?? 500).json({error: err.message ?? "Something went wrong"})
+})
 
 export default app;

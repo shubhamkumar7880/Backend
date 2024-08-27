@@ -15,10 +15,19 @@ const uploadOnCloudinary = async (localFilePath) => {
         })
 
         console.log("File has been uploaded successfully", response.url)
-        fs.unlinkSync(localFilePath)
+        try {
+            fs.unlinkSync(localFilePath);
+        } catch (err) {
+            console.error("Error while deleting the file:", err);
+        }
         return response;
     } catch(err){
-        fs.unlinkSync(localFilePath) // remove the locally saved temporaray file as the uplaod operation got failed
+        try {
+            fs.unlinkSync(localFilePath); // remove the locally saved temporaray file as the uplaod operation got failed
+        } catch (unlinkErr) {
+            console.error("Error while deleting the file after failure:", unlinkErr);
+        }
+        console.error("Upload failed", err);
         return null;
     }
 }
