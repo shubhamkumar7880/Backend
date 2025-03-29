@@ -28,7 +28,7 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(400, "All fields are required");
     }
     const existedUser = await User.findOne({
-        $or: [{ username }, { email }]
+        $or: [{ username: username.toLowerCase() }, { email: email.toLowerCase() }]
     }); // method in mongoose to find the user using email or username.
 
     if (existedUser) {
@@ -57,7 +57,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
     const user = await User.create({
         fullName,
-        email,
+        email: email.toLowerCase(),
         username: username.toLowerCase(),
         password,
         avatar: avatar?.url,

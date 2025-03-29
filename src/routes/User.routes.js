@@ -5,6 +5,7 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
+//unsecured routes
 router.route("/register").post(
     upload.fields([
         {
