@@ -21,6 +21,15 @@ app.use(function(req, res, next) {
   next(); // Calling next() passes control to the next middleware function
 });
 
+app.use() is a middleware function in Express.js that allows you to:
+
+Apply middleware functions to requests.
+
+Define routes or mount routers.
+
+Handle static files.
+
+Set global configurations.
 // Route handler
 app.get('/', function(req, res) {
   res.send('Hello World!');
