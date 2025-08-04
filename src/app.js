@@ -20,11 +20,14 @@ app.use(cookieParser()); // cookieparser is used to set or access cookies(crud o
 import userRouter from './routes/User.routes.js';
 import videoRouter from './routes/Video.routes.js';
 import tweetRouter from './routes/Tweet.route.js';
+import subscriptionRouter from './routes/Subscription.route.js';
+
 
 //routes declarations
 app.use('/api/v1/users', userRouter); // here /users works as prefix means our url will be http://localhost:8000/api/v1/users/'route name'
 app.use('/api/v1/videos', videoRouter);
 app.use('/api/v1/tweets', tweetRouter);
+app.use("/api/v1/subscriptions", subscriptionRouter)
 app.use((err, req, res, next) => {
   res
     .status(err.statusCode ?? 500)
