@@ -4,7 +4,7 @@ import asyncHandler from '../utils/asyncHandler.js';
 import uploadOnCloudinary from '../utils/cloudinary.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import jwt from 'jsonwebtoken';
-import mongoose from 'mongoose';
+import mongoose, { isValidObjectId } from 'mongoose';
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -370,10 +370,21 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 });
 
 const getWatchHistory = asyncHandler(async (req, res) => {
-  const user = User.aggregate([
+  const user = await User.aggregate([
     {
       $match: {
         _id: new mongoose.Types.ObjectId(req.user?._id), // mongoose doesn't support here in pipeline, so, we need to make mongoose id using new mongoose.Types.ObjectId.
+      },
+    },
+    {
+      $addFields: {
+        watchHistory: {
+          $map: {
+            input: '$watchHistory',
+            as: 'id',
+            in: { $toObjectId: '$$id' },
+          },
+        },
       },
     },
     {
@@ -397,22 +408,24 @@ const getWatchHistory = asyncHandler(async (req, res) => {
                     avatar: 1,
                   },
                 },
-                {
-                  $addFields: {
-                    owner: {
-                      // if we write same name, then, it overrides the data.
-                      $first: '$owner', // first operator returns 0th index of an array.
-                    },
-                  },
-                },
               ],
+            },
+          },
+          {
+            $addFields: {
+              owner: {
+                // if we write same name, then, it overrides the data.
+                $first: '$owner', // first operator returns 0th index of an array.
+              },
             },
           },
         ],
       },
     },
   ]);
-
+  if (!user?.length) {
+    throw new ApiError(404, 'User not found');
+  }
   return res
     .status(200)
     .json(
@@ -422,6 +435,47 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         'watchHistory fetched successfully!',
       ),
     );
+});
+
+const addWatchHistory = asyncHandler(async (req, res) => {
+  const { videoId } = req.body;
+  if (!videoId || !isValidObjectId(videoId)) {
+    throw new ApiError(400, 'Video ID is required');
+  }
+  await User.findByIdAndUpdate(
+    req.user?._id,
+    { $addToSet: { watchHistory: videoId } },
+    { new: true },
+  ).select('-password -refreshToken');
+  return res
+    .status(200)
+    .json(new ApiResponse(200, null, 'Video added to watchHistory!'));
+});
+
+const updateWatchHistory = asyncHandler(async (req, res) => {
+  const { videoId } = req.body;
+  if (!videoId || !isValidObjectId(videoId)) {
+    throw new ApiError(400, 'Video ID is required');
+  }
+  await User.findByIdAndUpdate(
+    req.user?._id,
+    { $pull: { watchHistory: videoId } }, // $pull operator removes the value from the array.
+    { new: true },
+  ).select('-password -refreshToken');
+  return res
+    .status(200)
+    .json(new ApiResponse(200, null, 'Video removed from watchHistory!'));
+});
+
+const clearWatchHistory = asyncHandler(async (req, res) => {
+  await User.findByIdAndUpdate(
+    req.user?._id,
+    { $set: { watchHistory: [] } }, // $set operator sets the value
+    { new: true },
+  ).select('-password -refreshToken');
+  return res
+    .status(200)
+    .json(new ApiResponse(200, null, 'WatchHistory cleared successfully!'));
 });
 
 export {
@@ -436,4 +490,7 @@ export {
   updateCoverImage,
   getUserChannelProfile,
   getWatchHistory,
+  addWatchHistory,
+  updateWatchHistory,
+  clearWatchHistory,
 };
