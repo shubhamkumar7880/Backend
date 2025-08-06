@@ -51,6 +51,41 @@ const getVideoComments = asyncHandler(async (req, res) => {
     {
       $unwind: '$owner',
     },
+    {
+      $lookup: {
+        from: 'likes',
+        let: { commentId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ['$comment', '$$commentId'] },
+                  {
+                    $eq: [
+                      '$likedBy',
+                      new mongoose.Types.ObjectId(req.user._id),
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          { $limit: 1 }, // optimization
+        ],
+        as: 'isLikedArr',
+      },
+    },
+    {
+      $addFields: {
+        isLiked: { $gt: [{ $size: '$isLikedArr' }, 0] },
+      },
+    },
+    {
+      $project: {
+        isLikedArr: 0, // optional: remove helper array
+      },
+    },
   ]);
   if (!comments || comments.length === 0) {
     throw new ApiError(404, 'No Comments found');
@@ -117,6 +152,41 @@ const getTweetComments = asyncHandler(async (req, res) => {
     },
     {
       $unwind: '$owner',
+    },
+    {
+      $lookup: {
+        from: 'likes',
+        let: { commentId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ['$comment', '$$commentId'] },
+                  {
+                    $eq: [
+                      '$likedBy',
+                      new mongoose.Types.ObjectId(req.user._id),
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          { $limit: 1 },
+        ],
+        as: 'isLikedArr',
+      },
+    },
+    {
+      $addFields: {
+        isLiked: { $gt: [{ $size: '$isLikedArr' }, 0] },
+      },
+    },
+    {
+      $project: {
+        isLikedArr: 0, // optional: remove helper array
+      },
     },
   ]);
   if (!comments || comments.length === 0) {

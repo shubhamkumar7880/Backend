@@ -42,11 +42,59 @@ const getUserTweets = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'User not found');
   }
   const skip = (page - 1) * limit;
-
-  const tweets = await Tweet.find({ owner: user._id })
-    .sort({ [sortBy]: sortType === 'desc' ? -1 : 1 }) // Sorting based on the query parameters
-    .skip(skip) // Skipping documents for pagination
-    .limit(parseInt(limit)); // Limiting the number of documents
+  const tweets = await Tweet.aggregate([
+    {
+      $match: {
+        owner: new mongoose.Types.ObjectId(user._id),
+      },
+    },
+    {
+      $sort: {
+        [sortBy]: sortType === 'desc' ? -1 : 1,
+      },
+    },
+    {
+      $skip: skip,
+    },
+    {
+      $limit: parseInt(limit),
+    },
+    {
+      $lookup: {
+        from: 'likes',
+        let: { tweetId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ['$tweet', '$$tweetId'] },
+                  {
+                    $eq: [
+                      '$likedBy',
+                      new mongoose.Types.ObjectId(req.user._id),
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          { $limit: 1 },
+        ],
+        as: 'likes',
+      },
+    },
+    {
+      $addFields: {
+        isLiked: { $gt: [{ $size: '$likes' }, 0] },
+      },
+    },
+    {
+      $project: {
+        likes: 0,
+      },
+    },
+  ]);
 
   if (!tweets || tweets.length === 0) {
     throw new ApiError(404, 'No tweets found');
@@ -108,7 +156,7 @@ const deleteTweet = asyncHandler(async (req, res) => {
   if (!tweetId) {
     throw new ApiError(400, 'Tweet ID is required');
   }
-   const tweetData = await Tweet.findById(tweetId);
+  const tweetData = await Tweet.findById(tweetId);
   if (!tweetData) {
     throw new ApiError(404, 'Tweet not found');
   }
