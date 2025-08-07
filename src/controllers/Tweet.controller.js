@@ -62,40 +62,39 @@ const getUserTweets = asyncHandler(async (req, res) => {
     {
       $lookup: {
         from: 'likes',
-        let: { tweetId: '$_id' },
-        pipeline: [
-          {
-            $match: {
-              $expr: {
-                $and: [
-                  { $eq: ['$tweet', '$$tweetId'] },
-                  {
-                    $eq: [
-                      '$likedBy',
-                      new mongoose.Types.ObjectId(req.user._id),
-                    ],
-                  },
-                ],
-              },
-            },
-          },
-          { $limit: 1 },
-        ],
+        foreignField: 'tweet',
+        localField: '_id',
         as: 'likes',
       },
     },
     {
       $addFields: {
-        isLiked: { $gt: [{ $size: '$likes' }, 0] },
+        isLiked: {
+          $cond: {
+            if: {
+              $in: [req.user._id, '$likes.likedBy'],
+            },
+            then: true,
+            else: false,
+          },
+        },
+        likes: { $size: '$likes' },
       },
     },
     {
-      $project: {
-        likes: 0,
+      $lookup: {
+        from: 'comments',
+        localField: '_id',
+        foreignField: 'tweet',
+        as: 'commentsCount',
+      },
+    },
+    {
+      $addFields: {
+        commentsCount: { $size: '$commentsCount' },
       },
     },
   ]);
-
   if (!tweets || tweets.length === 0) {
     throw new ApiError(404, 'No tweets found');
   }

@@ -5,6 +5,7 @@ import ApiResponse from '../utils/ApiResponse.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import uploadOnCloudinary from '../utils/cloudinary.js';
 import { Like } from '../models/Like.model.js';
+import mongoose from 'mongoose';
 
 const getAllVideos = asyncHandler(async (req, res) => {
   const {
@@ -98,23 +99,90 @@ const getVideoById = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Video ID is required');
   }
   try {
-    const video = await Video.findById(videoId);
-    if (!video) {
+    const video = await Video.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(videoId), // mongoose doesn't support here in pipeline, so, we need to make mongoose id using new mongoose.Types.ObjectId.
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'owner',
+          foreignField: '_id',
+          as: 'channel',
+          pipeline: [
+            {
+              $lookup: {
+                from: 'subscriptions',
+                localField: '_id',
+                foreignField: 'channel',
+                as: 'subscribersCount',
+              },
+            },
+            {
+              $addFields: {
+                isSubscribed: {
+                  $cond: {
+                    if: {
+                      $in: [req.user?._id, '$subscribersCount.subscriber'],
+                    }, // check if user is present in the subscriber object as subscriber(field).
+                    then: true,
+                    else: false,
+                  },
+                },
+                subscribersCount: { $size: '$subscribersCount' },
+              },
+            },
+            {
+              $project: {
+                fullName: 1,
+                username: 1,
+                avatar: 1,
+                subscribersCount: 1,
+                isSubscribed: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $lookup: {
+          from: 'likes',
+          localField: '_id',
+          foreignField: 'video',
+          as: 'totalLikes',
+        },
+      },
+      {
+        $addFields: {
+          isLiked: {
+            $cond: {
+              if: {
+                $in: [req.user?._id, '$totalLikes.likedBy'],
+              },
+              then: true,
+              else: false,
+            },
+          },
+          totalLikes: { $size: '$totalLikes' },
+        },
+      },
+      {
+        $addFields: {
+          channel: {
+            // if we write same name, then, it overrides the data.
+            $first: '$channel', // first operator returns 0th index of an array.
+          },
+        },
+      },
+    ]);
+    if (!video || !video?.length) {
       throw new ApiError(404, 'Video not found');
     }
-    const isLiked = await Like.findOne({
-      likedBy: req.user?._id,
-      video: videoId,
-    });
     return res
-      .status(201)
-      .json(
-        new ApiResponse(
-          201,
-          { video, isLiked: !!isLiked },
-          'Video fetched successfully!',
-        ),
-      );
+      .status(200)
+      .json(new ApiResponse(200, video?.[0], 'Video fetched successfully!'));
   } catch (error) {
     throw new ApiError(500, error?.message || 'failed to fetch video!');
   }

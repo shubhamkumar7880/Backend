@@ -54,36 +54,23 @@ const getVideoComments = asyncHandler(async (req, res) => {
     {
       $lookup: {
         from: 'likes',
-        let: { commentId: '$_id' },
-        pipeline: [
-          {
-            $match: {
-              $expr: {
-                $and: [
-                  { $eq: ['$comment', '$$commentId'] },
-                  {
-                    $eq: [
-                      '$likedBy',
-                      new mongoose.Types.ObjectId(req.user._id),
-                    ],
-                  },
-                ],
-              },
-            },
-          },
-          { $limit: 1 }, // optimization
-        ],
-        as: 'isLikedArr',
+        localField: '_id',
+        foreignField: 'comment',
+        as: 'likes',
       },
     },
     {
       $addFields: {
-        isLiked: { $gt: [{ $size: '$isLikedArr' }, 0] },
-      },
-    },
-    {
-      $project: {
-        isLikedArr: 0, // optional: remove helper array
+        isLiked: {
+          $cond: {
+            if: {
+              $in: [req.user._id, '$likes.likedBy'],
+            },
+            then: true,
+            else: false,
+          },
+        },
+        likes: { $size: '$likes' },
       },
     },
   ]);
@@ -156,36 +143,23 @@ const getTweetComments = asyncHandler(async (req, res) => {
     {
       $lookup: {
         from: 'likes',
-        let: { commentId: '$_id' },
-        pipeline: [
-          {
-            $match: {
-              $expr: {
-                $and: [
-                  { $eq: ['$comment', '$$commentId'] },
-                  {
-                    $eq: [
-                      '$likedBy',
-                      new mongoose.Types.ObjectId(req.user._id),
-                    ],
-                  },
-                ],
-              },
-            },
-          },
-          { $limit: 1 },
-        ],
-        as: 'isLikedArr',
+        localField: '_id',
+        foreignField: 'comment',
+        as: 'likes',
       },
     },
     {
       $addFields: {
-        isLiked: { $gt: [{ $size: '$isLikedArr' }, 0] },
-      },
-    },
-    {
-      $project: {
-        isLikedArr: 0, // optional: remove helper array
+        isLiked: {
+          $cond: {
+            if: {
+              $in: [req.user._id, '$likes.likedBy'],
+            },
+            then: true,
+            else: false,
+          },
+        },
+        likes: { $size: '$likes' },
       },
     },
   ]);
