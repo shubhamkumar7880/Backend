@@ -23,6 +23,7 @@ import tweetRouter from './routes/Tweet.route.js';
 import subscriptionRouter from './routes/Subscription.route.js';
 import commentRouter from './routes/Comment.route.js';
 import likeRouter from './routes/Like.route.js';
+import playlistRouter from './routes/Playlist.route.js';
 
 //routes declarations
 app.use('/api/v1/users', userRouter); // here /users works as prefix means our url will be http://localhost:8000/api/v1/users/'route name'
@@ -31,6 +32,7 @@ app.use('/api/v1/tweets', tweetRouter);
 app.use('/api/v1/subscriptions', subscriptionRouter);
 app.use('/api/v1/comments', commentRouter);
 app.use('/api/v1/likes', likeRouter);
+app.use('/api/v1/playlist', playlistRouter);
 app.use((err, req, res, next) => {
   res
     .status(err.statusCode ?? 500)
