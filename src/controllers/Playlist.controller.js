@@ -23,7 +23,9 @@ const createPlaylist = asyncHandler(async (req, res) => {
     Array.isArray(req.files?.playlistThumbnail) &&
     req.files.playlistThumbnail.length > 0
   ) {
-    thumbnailLocalPath = req.files.playlistThumbnail[0].path;
+    if (!req.files.playlistThumbnail[0]?.mimetype.includes('image')) {
+      throw new ApiError(400, 'Invalid file type');
+    } else thumbnailLocalPath = req.files.playlistThumbnail[0].path;
   }
   let thumbnail = '';
   if (thumbnailLocalPath) {
@@ -177,6 +179,12 @@ const updatePlaylist = asyncHandler(async (req, res) => {
     req.files.playlistThumbnail.length > 0;
 
   if (name || description || hasThumbnail) {
+    if (
+      hasThumbnail &&
+      !req.files.playlistThumbnail[0]?.mimetype.includes('image')
+    ) {
+      throw new ApiError(400, 'Thumbnail must be an image');
+    }
     const playlist = await Playlist.findById(playlistId);
     if (!playlist) {
       throw new ApiError(404, 'Playlist not found');
